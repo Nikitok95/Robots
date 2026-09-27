@@ -1,0 +1,60 @@
+# Countries on the world map. Add a country by appending an entry.
+#   code      internal id (ISO2; EA = euro area)
+#   geo       names in frontend/public/world.json (properties.name)
+#   point     [lon, lat] marker for places too small for the map polygon
+#   bis/oecd/imf/wb  codes in each source (null = not covered)
+#   te        country name in Trading Economics (optional paid provider)
+#   fx_inverse  true -> show as CCY/USD (EUR/USD, GBP/USD...), else USD/CCY
+#   cb        central bank short name, used for next-meeting lookup
+countries:
+  # ------------------------------------------------------------------ G10
+  - {code: US, name: США, currency: USD, group: G10, geo: [United States], bis: US, oecd: USA, imf: USA, wb: US, te: United States, cb: FED}
+  - {code: EA, name: Еврозона, currency: EUR, group: G10, geo: [], bis: XM, oecd: EA20, imf: EURO, wb: EMU, te: Euro Area, fx_inverse: true, cb: ECB}
+  - {code: GB, name: Великобритания, currency: GBP, group: G10, geo: [United Kingdom], bis: GB, oecd: GBR, imf: GBR, wb: GB, te: United Kingdom, fx_inverse: true, cb: BOE}
+  - {code: JP, name: Япония, currency: JPY, group: G10, geo: [Japan], bis: JP, oecd: JPN, imf: JPN, wb: JP, te: Japan, cb: BOJ}
+  - {code: CH, name: Швейцария, currency: CHF, group: G10, geo: [Switzerland], bis: CH, oecd: CHE, imf: CHE, wb: CH, te: Switzerland, cb: SNB}
+  - {code: CA, name: Канада, currency: CAD, group: G10, geo: [Canada], bis: CA, oecd: CAN, imf: CAN, wb: CA, te: Canada, cb: BOC}
+  - {code: AU, name: Австралия, currency: AUD, group: G10, geo: [Australia], bis: AU, oecd: AUS, imf: AUS, wb: AU, te: Australia, fx_inverse: true, cb: RBA}
+  - {code: NZ, name: Новая Зеландия, currency: NZD, group: G10, geo: [New Zealand], bis: NZ, oecd: NZL, imf: NZL, wb: NZ, te: New Zealand, fx_inverse: true, cb: RBNZ}
+  - {code: NO, name: Норвегия, currency: NOK, group: G10, geo: [Norway], bis: "NO", oecd: NOR, imf: NOR, wb: "NO", te: Norway, cb: NORGES}
+  - {code: SE, name: Швеция, currency: SEK, group: G10, geo: [Sweden], bis: SE, oecd: SWE, imf: SWE, wb: SE, te: Sweden, cb: RIKSBANK}
+  # ------------------------------------------------------------------ EM / calendar
+  - {code: CN, name: Китай, currency: CNY, group: EM, geo: [China], bis: CN, oecd: CHN, imf: CHN, wb: CN, te: China, cb: PBOC}
+  - {code: HK, name: Гонконг, currency: HKD, group: EM, geo: [], point: [114.17, 22.32], bis: HK, oecd: null, imf: HKG, wb: HK, te: Hong Kong, cb: HKMA}
+  - {code: SG, name: Сингапур, currency: SGD, group: EM, geo: [Singapore], point: [103.82, 1.35], bis: SG, oecd: null, imf: SGP, wb: SG, te: Singapore, cb: MAS,
+     note: "MAS управляет курсом (S$NEER), процентной ставки-цели нет"}
+  - {code: KR, name: Южная Корея, currency: KRW, group: EM, geo: [Korea], bis: KR, oecd: KOR, imf: KOR, wb: KR, te: South Korea, cb: BOK}
+  - {code: IN, name: Индия, currency: INR, group: EM, geo: [India], bis: IN, oecd: IND, imf: IND, wb: IN, te: India, cb: RBI}
+  - {code: MX, name: Мексика, currency: MXN, group: EM, geo: [Mexico], bis: MX, oecd: MEX, imf: MEX, wb: MX, te: Mexico, cb: BANXICO}
+  - {code: BR, name: Бразилия, currency: BRL, group: EM, geo: [Brazil], bis: BR, oecd: BRA, imf: BRA, wb: BR, te: Brazil, cb: BCB}
+  - {code: ZA, name: ЮАР, currency: ZAR, group: EM, geo: [South Africa], bis: ZA, oecd: ZAF, imf: ZAF, wb: ZA, te: South Africa, cb: SARB}
+  - {code: TR, name: Турция, currency: TRY, group: EM, geo: [Turkey], bis: TR, oecd: TUR, imf: TUR, wb: TR, te: Turkey, cb: CBRT}
+  - {code: PL, name: Польша, currency: PLN, group: EM, geo: [Poland], bis: PL, oecd: POL, imf: POL, wb: PL, te: Poland, cb: NBP}
+  - {code: HU, name: Венгрия, currency: HUF, group: EM, geo: [Hungary], bis: HU, oecd: HUN, imf: HUN, wb: HU, te: Hungary, cb: MNB}
+  - {code: CZ, name: Чехия, currency: CZK, group: EM, geo: [Czech Rep.], bis: CZ, oecd: CZE, imf: CZE, wb: CZ, te: Czech Republic, cb: CNB}
+  - {code: DK, name: Дания, currency: DKK, group: EM, geo: [Denmark], bis: DK, oecd: DNK, imf: DNK, wb: DK, te: Denmark, cb: DN}
+
+# Euro area members: painted as one EUR block; click shows euro-area + national data.
+# detail: true -> national macro/budget/micro are fetched too.
+eurozone:
+  - {code: DE, name: Германия, geo: [Germany], bis: DE, oecd: DEU, imf: DEU, wb: DE, te: Germany, detail: true}
+  - {code: FR, name: Франция, geo: [France], bis: FR, oecd: FRA, imf: FRA, wb: FR, te: France, detail: true}
+  - {code: IT, name: Италия, geo: [Italy], bis: IT, oecd: ITA, imf: ITA, wb: IT, te: Italy, detail: true}
+  - {code: ES, name: Испания, geo: [Spain], bis: ES, oecd: ESP, imf: ESP, wb: ES, te: Spain, detail: true}
+  - {code: NL, name: Нидерланды, geo: [Netherlands], bis: NL, oecd: NLD, imf: NLD, wb: NL, te: Netherlands, detail: true}
+  - {code: BE, name: Бельгия, geo: [Belgium], bis: BE, oecd: BEL, imf: BEL, wb: BE, te: Belgium, detail: true}
+  - {code: AT, name: Австрия, geo: [Austria], bis: AT, oecd: AUT, imf: AUT, wb: AT, te: Austria, detail: true}
+  - {code: PT, name: Португалия, geo: [Portugal], bis: PT, oecd: PRT, imf: PRT, wb: PT, te: Portugal, detail: true}
+  - {code: IE, name: Ирландия, geo: [Ireland], bis: IE, oecd: IRL, imf: IRL, wb: IE, te: Ireland, detail: true}
+  - {code: FI, name: Финляндия, geo: [Finland], bis: FI, oecd: FIN, imf: FIN, wb: FI, te: Finland, detail: true}
+  - {code: GR, name: Греция, geo: [Greece], bis: GR, oecd: GRC, imf: GRC, wb: GR, te: Greece, detail: true}
+  - {code: SK, name: Словакия, geo: [Slovakia], imf: SVK, wb: SK}
+  - {code: SI, name: Словения, geo: [Slovenia], imf: SVN, wb: SI}
+  - {code: LT, name: Литва, geo: [Lithuania], imf: LTU, wb: LT}
+  - {code: LV, name: Латвия, geo: [Latvia], imf: LVA, wb: LV}
+  - {code: EE, name: Эстония, geo: [Estonia], imf: EST, wb: EE}
+  - {code: LU, name: Люксембург, geo: [Luxembourg], imf: LUX, wb: LU}
+  - {code: CY, name: Кипр, geo: [Cyprus], imf: CYP, wb: CY}
+  - {code: MT, name: Мальта, geo: [Malta], imf: MLT, wb: MT}
+  - {code: HR, name: Хорватия, geo: [Croatia], imf: HRV, wb: HR}
+  - {code: BG, name: Болгария, geo: [Bulgaria], imf: BGR, wb: BG}

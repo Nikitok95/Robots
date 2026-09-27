@@ -1,0 +1,29 @@
+# Scheduled policy decision dates (announcement day, local calendar date).
+# Only officially published dates; each bank lists its source. When the list
+# runs out, the next meeting is taken from the economic calendar feed.
+FED:
+  source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+  dates: [2026-06-17, 2026-07-29, 2026-09-16, 2026-10-28, 2026-12-09, 2027-01-27, 2027-03-17, 2027-04-28, 2027-06-09, 2027-07-28,
+          2027-09-15, 2027-10-27, 2027-12-08]
+BOJ:
+  source: https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm
+  dates: [2026-10-30, 2027-01-22, 2027-03-18, 2027-04-28, 2027-06-11, 2027-07-22, 2027-09-22,
+          2027-10-29, 2027-12-17]
+ECB:
+  source: https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html
+  dates: [2026-10-29, 2026-12-17]
+BOE:
+  source: https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates
+  dates: [2026-11-05, 2026-12-17]
+BOC:
+  source: https://www.bankofcanada.ca/press/upcoming-events/
+  dates: [2026-10-28, 2026-12-09]
+RBA:
+  source: https://www.rba.gov.au/schedules-events/board-meeting-schedules.html
+  dates: [2026-11-03, 2026-12-08]
+RBNZ:
+  source: https://www.rbnz.govt.nz/news-and-events/how-we-release-information/monetary-policy-and-ocr-decision-dates-until-february-2027
+  dates: [2026-10-28]
+NORGES:
+  source: https://www.norges-bank.no/en/topics/monetary-policy/Monetary-policy-meetings/
+  dates: [2026-09-24]
