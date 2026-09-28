@@ -5,6 +5,7 @@ import { fmtDateTime } from '../lib/format'
 export const TABS = [
   { id: 'dashboard', name: 'Дашборд' },
   { id: 'map', name: 'Карта' },
+  { id: 'predictions', name: 'Прогнозы' },
   { id: 'alerts', name: 'Алерты' },
   { id: 'sources', name: 'Источники' },
 ] as const

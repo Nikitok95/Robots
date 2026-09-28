@@ -4,6 +4,7 @@ import { api, type Dashboard } from './lib/api'
 import AlertsPage from './pages/AlertsPage'
 import DashboardPage from './pages/DashboardPage'
 import MapPage from './pages/MapPage'
+import PredictionsPage from './pages/PredictionsPage'
 import SourcesPage from './pages/SourcesPage'
 
 function tabFromHash(): Tab {
@@ -34,6 +35,7 @@ export default function App() {
         {tab === 'dashboard' && (err ? <div className="text-crit">Нет связи с API: {err}</div>
           : dash ? <DashboardPage data={dash} onOpenRules={() => go('alerts')} /> : <div className="text-mute">Загрузка…</div>)}
         {tab === 'map' && <MapPage />}
+        {tab === 'predictions' && <PredictionsPage />}
         {tab === 'alerts' && <AlertsPage />}
         {tab === 'sources' && <SourcesPage />}
       </main>

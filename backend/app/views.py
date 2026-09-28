@@ -286,6 +286,7 @@ def sources() -> dict:
     countries = [r for k, r in rows.items() if k.startswith("c.")]
     calendars = [r for k, r in rows.items() if k.startswith("calendar.")]
     zq = [r for k, r in rows.items() if k.startswith("zq.")]
+    zq += [r for k, r in rows.items() if k.startswith("predictions.")]
     return {
         "series": items,
         "countries": {"total": len(countries), "ok": sum(1 for r in countries if not r["last_error"]),
@@ -295,5 +296,7 @@ def sources() -> dict:
                                   for c in CALENDARS if f"calendar.{c.name}" not in rows],
         "fed_futures": zq,
         "adapters": [{"name": a.name, "label": a.label, "homepage": a.homepage,
-                      "needs_key": a.key_setting, "key_set": a.available()} for a in ADAPTERS.values()],
+                      "needs_key": a.key_setting, "key_set": a.available()} for a in ADAPTERS.values()]
+                    + [{"name": "polymarket", "label": "Polymarket", "homepage": "https://polymarket.com",
+                        "needs_key": None, "key_set": True}],
     }

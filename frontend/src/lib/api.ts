@@ -205,6 +205,47 @@ export interface Status {
   timezone: string
 }
 
+export interface PmOutcome {
+  id: string
+  label: string
+  question: string
+  prob: number
+  d1: number | null
+  w1: number | null
+  m1: number | null
+  volume: number
+}
+
+export interface PmEvent {
+  id: string
+  title: string
+  url: string
+  volume: number
+  volume_24h: number
+  end_date: string | null
+  n_outcomes: number
+  outcomes: PmOutcome[]
+  history: Point[]
+  section: string
+  fetched_at: string
+}
+
+export interface Predictions {
+  sections: { id: string; name: string; events: PmEvent[] }[]
+  fed_compare: {
+    meeting: string
+    event: string
+    url: string
+    rows: { label: string; change_bp: number; plus: boolean; polymarket: number; futures: number | null }[]
+    futures_error?: string
+  } | null
+  fetched_at: string | null
+  error: string | null
+  source: string
+  homepage: string
+  min_volume: number
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`/api${path}`, {
     ...init,
@@ -227,4 +268,5 @@ export const api = {
   events: (limit = 100) => req<AlertEvent[]>(`/alerts/events?limit=${limit}`),
   map: () => req<MapData>('/map'),
   country: (code: string) => req<CountryDetail>(`/map/country/${code}`),
+  predictions: () => req<Predictions>('/predictions'),
 }

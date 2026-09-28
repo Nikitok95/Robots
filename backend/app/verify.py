@@ -54,6 +54,18 @@ def main() -> int:
             print(f"  OK   {c.label}: {len(ev)} событий")
         except Exception as e:
             print(f"  FAIL {c.label}: {e}")
+    print("\n# Prediction markets")
+    try:
+        from .adapters.polymarket import collect
+        evs = collect()
+        by = {}
+        for e in evs:
+            by[e["section"]] = by.get(e["section"], 0) + 1
+        print(f"  OK   Polymarket: {len(evs)} событий {by}" if evs else "  FAIL Polymarket: 0 событий")
+        failed += not evs
+    except Exception as e:
+        print(f"  FAIL Polymarket: {e}")
+        failed += 1
     if "--macro" in sys.argv:
         print("\n# Country indicators")
         for sid, ind, chain in country_jobs():

@@ -15,7 +15,7 @@ def start() -> BackgroundScheduler:
     s = get_settings()
     _sched = BackgroundScheduler(timezone=s.timezone)
     for job, cron in (("markets", s.refresh_cron_markets), ("crypto", s.refresh_cron_crypto),
-                      ("macro", s.refresh_cron_macro)):
+                      ("macro", s.refresh_cron_macro), ("predictions", s.refresh_cron_predictions)):
         _sched.add_job(run_job, CronTrigger.from_crontab(cron, timezone=s.timezone), args=[job],
                        id=job, max_instances=1, coalesce=True, misfire_grace_time=3600)
     _sched.start()

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     refresh_cron_markets: str = "30 7,23 * * *"
     refresh_cron_crypto: str = "5 * * * *"
     refresh_cron_macro: str = "0 6 * * *"
+    refresh_cron_predictions: str = "20 * * * *"
     scheduler_enabled: bool = True
     refresh_on_startup: bool = True
 

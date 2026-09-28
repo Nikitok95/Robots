@@ -9,6 +9,7 @@ from . import db, scheduler, views
 from .alerts import RULES_BY_ID, evaluate_all, rules_with_state, seed_rules
 from .config import get_settings
 from .ingest import fed_snapshot, run_job, running
+from .services import predictions as predictions_svc
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -56,8 +57,8 @@ def fed():
 
 @app.post("/api/refresh")
 def refresh(bg: BackgroundTasks, job: str = "all", force: bool = True):
-    if job not in ("all", "markets", "crypto", "macro"):
-        raise HTTPException(400, "job must be all|markets|crypto|macro")
+    if job not in ("all", "markets", "crypto", "macro", "predictions"):
+        raise HTTPException(400, "job must be all|markets|crypto|macro|predictions")
     # macro data are annual/monthly: a manual refresh respects their min interval
     bg.add_task(run_job, job, force and job != "macro")
     return {"started": job}
@@ -73,6 +74,11 @@ def status():
 @app.get("/api/sources")
 def sources():
     return views.sources()
+
+
+@app.get("/api/predictions")
+def predictions():
+    return predictions_svc.snapshot(fed_snapshot())
 
 
 # ------------------------------------------------------------------ alerts

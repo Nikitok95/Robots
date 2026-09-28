@@ -187,7 +187,7 @@ def _run_many(tasks: list[tuple[str, str, list]], force: bool) -> tuple[int, int
 
 
 def run_job(job: str, force: bool = False) -> dict:
-    """job: markets | crypto | macro | all"""
+    """job: markets | crypto | macro | predictions | all"""
     with _job_lock:
         if running.get(job):
             return {"job": job, "status": "already running"}
@@ -196,7 +196,7 @@ def run_job(job: str, force: bool = False) -> dict:
     ok = failed = 0
     try:
         http.clear_cache()
-        jobs = ["markets", "crypto", "macro"] if job == "all" else [job]
+        jobs = ["markets", "crypto", "macro", "predictions"] if job == "all" else [job]
         for j in jobs:
             if j in ("markets", "crypto"):
                 tasks = [(s.id, s.freq, s.sources) for s in SERIES if s.job == j and not s.derived]
@@ -208,6 +208,10 @@ def run_job(job: str, force: bool = False) -> dict:
                 a, b = _run_many(tasks, force)
                 c, d = refresh_calendar()
                 ok, failed = ok + a + c, failed + b + d
+            elif j == "predictions":
+                from .services.predictions import refresh as refresh_predictions
+                good = refresh_predictions()
+                ok, failed = (ok + 1, failed) if good else (ok, failed + 1)
         from .alerts import evaluate_all
         evaluate_all()
     finally:

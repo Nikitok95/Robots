@@ -65,6 +65,16 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     fetched_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cal_ts ON calendar_events (ts);
+CREATE TABLE IF NOT EXISTS prediction_events (
+    id         TEXT PRIMARY KEY,       -- Polymarket event id
+    section    TEXT NOT NULL,
+    volume     REAL NOT NULL,
+    payload    TEXT NOT NULL,          -- JSON: title, url, outcomes...
+    history    TEXT,                   -- JSON [[date, prob]] of the leading outcome
+    history_token TEXT,
+    history_at TEXT,
+    fetched_at TEXT NOT NULL
+);
 """
 
 _local = threading.local()
@@ -275,3 +285,27 @@ def get_calendar(start_iso: str, end_iso: str, currencies: list[str] | None = No
     if conds:
         q += " AND (" + " OR ".join(conds) + ")"
     return [dict(r) for r in connect().execute(q + " ORDER BY ts", args).fetchall()]
+
+
+# ---------------------------------------------------------------- predictions (Polymarket)
+def get_predictions() -> list[dict]:
+    rows = connect().execute("SELECT * FROM prediction_events ORDER BY volume DESC").fetchall()
+    return [{**json.loads(r["payload"]), "section": r["section"],
+             "history": json.loads(r["history"]) if r["history"] else [],
+             "history_token": r["history_token"], "history_at": r["history_at"], "fetched_at": r["fetched_at"]}
+            for r in rows]
+
+
+def replace_predictions(events: list[dict]) -> None:
+    """Snapshot semantics: events that left the selection (closed, below the floor) disappear."""
+    now = utcnow_iso()
+    with tx() as c:
+        c.execute("DELETE FROM prediction_events")
+        c.executemany(
+            """INSERT INTO prediction_events (id, section, volume, payload, history, history_token, history_at, fetched_at)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            [(e["id"], e["section"], e["volume"],
+              json.dumps({k: v for k, v in e.items() if k not in ("section", "history", "history_token", "history_at")}),
+              json.dumps(e.get("history") or []), e.get("history_token"), e.get("history_at"), now)
+             for e in events],
+        )
