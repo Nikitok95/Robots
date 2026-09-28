@@ -66,6 +66,24 @@ def select_series(text: str, prefer: list[dict]) -> list[Obs]:
     raise SourceError(f"OECD: нет серии под фильтр {prefer}; доступно {seen}")
 
 
+import threading as _threading
+import time as _time
+
+# Публичный API OECD пускает ~20 запросов в минуту с адреса и отвечает 429 на
+# залпы (проверено 2026-09-28): держим не чаще одного запроса в 3,5 с.
+_PACE_SEC = 3.5
+_pace_lock = _threading.Lock()
+_pace_last = [0.0]
+
+
+def _pace() -> None:
+    with _pace_lock:
+        wait = _pace_last[0] + _PACE_SEC - _time.monotonic()
+        if wait > 0:
+            _time.sleep(wait)
+        _pace_last[0] = _time.monotonic()
+
+
 class OecdAdapter(SourceAdapter):
     name = "oecd"
     label = "OECD"
@@ -80,6 +98,7 @@ class OecdAdapter(SourceAdapter):
         with _lock:
             if ck in _dims_cache:
                 return _dims_cache[ck]
+        _pace()
         r = http.get(f"{BASE}/dataflow/{agency}/{flow}/latest", params={"references": "datastructure"},
                      headers={"Accept": "application/vnd.sdmx.structure+xml;version=2.1"})
         dims = parse_dimensions(r.text)
@@ -92,6 +111,7 @@ class OecdAdapter(SourceAdapter):
         dims = self.dimensions(agency, flow)
         key = ".".join(params["dims"].get(d, "") for d in dims)
         start = since or (date.today() - timedelta(days=365 * 7))
+        _pace()
         r = http.get(f"{BASE}/data/{agency},{flow}/{key}",
                      params={"startPeriod": start.strftime("%Y-%m"), "format": "csvfile"})
         if not r.text.strip() or r.text.strip() == "NoResultsFound":

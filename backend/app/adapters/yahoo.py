@@ -19,8 +19,11 @@ class YahooAdapter(SourceAdapter):
         start = since or (date.today() - timedelta(days=365 * 6))
         p1 = int(datetime(start.year, start.month, start.day, tzinfo=timezone.utc).timestamp())
         p2 = int(datetime.now(timezone.utc).timestamp()) + 86400
+        # Yahoo отвечает 429 на полный браузерный User-Agent без cookie/crumb,
+        # а короткий «Mozilla/5.0» пропускает (проверено с сервера 2026-09-28).
         r = http.get(URL.format(symbol=symbol),
-                     params={"period1": p1, "period2": p2, "interval": "1d", "events": "history"})
+                     params={"period1": p1, "period2": p2, "interval": "1d", "events": "history"},
+                     headers={"User-Agent": "Mozilla/5.0", "Accept": "*/*"})
         data = r.json()
         chart = data.get("chart") or {}
         if chart.get("error"):

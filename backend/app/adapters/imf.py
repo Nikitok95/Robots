@@ -19,7 +19,10 @@ class ImfAdapter(SourceAdapter):
 
     def fetch(self, params: dict, since: date | None) -> list[Obs]:
         ind, code = params["indicator"], params["code"]
-        data = http.get(URL.format(indicator=ind, code=code)).json()
+        # IMF (Akamai) отвечает 403 на браузерный User-Agent без cookies, а обычный
+        # клиентский пропускает (проверено 2026-09-28).
+        data = http.get(URL.format(indicator=ind, code=code),
+                        headers={"User-Agent": "macro-dashboard/1.0 (+https://macro.tradegreat.io)", "Accept": "application/json"}).json()
         series = ((data.get("values") or {}).get(ind) or {}).get(code)
         if series is None:
             raise SourceError(f"IMF: нет данных {ind}/{code}")
