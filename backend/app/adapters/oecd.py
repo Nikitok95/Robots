@@ -164,10 +164,11 @@ class OecdAdapter(SourceAdapter):
 
 
 def _get(url: str, **kw):
+    _pace()
+    # Проверка после очереди: пока поток ждал своей очереди, другой мог получить 429.
     left = _blocked_until[0] - _time.monotonic()
     if left > 0:
         raise SourceError(f"OECD: лимит запросов исчерпан, пауза ещё {int(left // 60)} мин")
-    _pace()
     try:
         return http.get(url, cache=False, retries=1, **kw)
     except SourceError as e:

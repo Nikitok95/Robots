@@ -326,3 +326,18 @@ def test_forexfactory_parse():
                    {"title": "broken", "country": "EUR", "date": "not a date"}])
     assert len(ev) == 1
     assert ev[0]["ts"] == "2026-10-28T18:00:00+00:00" and ev[0]["currency"] == "USD"
+
+
+@respx.mock
+def test_oecd_pause_checked_after_waiting_in_queue(monkeypatch):
+    """A thread that waited in the pacing queue must not fire after another thread got 429."""
+    from app.adapters import oecd
+    data = respx.get(url__regex=r".*/data/.*").mock(return_value=httpx.Response(200, text=OECD_CSV))
+
+    def pace_then_blocked():
+        oecd._blocked_until[0] = oecd._time.monotonic() + 3600  # 429 arrived while we waited
+
+    monkeypatch.setattr(oecd, "_pace", pace_then_blocked)
+    with pytest.raises(SourceError) as e:
+        oecd._get("https://sdmx.oecd.org/public/rest/data/X/Y")
+    assert "пауза" in str(e.value) and data.call_count == 0
