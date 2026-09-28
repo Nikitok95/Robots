@@ -39,7 +39,8 @@ def parse_dimensions(xml_text: str) -> list[str]:
     return out
 
 
-def select_series(text: str, prefer: list[dict]) -> list[Obs]:
+def select_series(text: str, prefer: list[dict], area: str | None = None) -> list[Obs]:
+    """`area` — оставить строки одной страны: ответ может быть пачкой стран."""
     reader = csv.DictReader(io.StringIO(text))
     fields = reader.fieldnames or []
     if "OBS_VALUE" not in fields or "TIME_PERIOD" not in fields:
@@ -50,6 +51,8 @@ def select_series(text: str, prefer: list[dict]) -> list[Obs]:
     series: dict[tuple, dict[str, float]] = defaultdict(dict)
     meta: dict[tuple, dict] = {}
     for r in reader:
+        if area and r.get("REF_AREA", area) != area:
+            continue
         k = tuple(r.get(c, "") for c in dim_cols)
         d, v = norm_period(r["TIME_PERIOD"]), to_float(r["OBS_VALUE"])
         if d and v is not None:
@@ -76,6 +79,35 @@ _pace_lock = _threading.Lock()
 _pace_last = [0.0]
 
 
+# Лимит OECD считается по запросам с адреса за час, и 429 тоже в него входит.
+# Поэтому: страны одного датафлоу берём пачками по _BATCH в одном запросе
+# (REF_AREA=USA+GBR+...), ответ держим в памяти _TTL секунд, на 429 не
+# повторяем и час больше не стучимся — серии просто подождут следующего прогона.
+_BATCH = 8
+_TTL = 6 * 3600
+_BLOCK_SEC = 3600
+_data_cache: dict[str, tuple[float, str]] = {}
+_blocked_until = [0.0]
+
+
+def clear_cache() -> None:
+    with _lock:
+        _data_cache.clear()
+        _blocked_until[0] = 0.0
+
+
+def _batch_for(agency: str, flow: str, freq: str, area: str) -> list[str]:
+    """Пачка стран из каталога, в которую попадает `area` (сама по себе — если её там нет)."""
+    from ..map_catalog import country_jobs  # поздний импорт: каталог импортирует адаптеры
+    areas = sorted({p["dims"]["REF_AREA"] for _, _, chain in country_jobs() for name, p in chain
+                    if name == "oecd" and p["agency"] == agency and p["flow"] == flow
+                    and p["dims"].get("FREQ") == freq})
+    if area not in areas:
+        return [area]
+    i = areas.index(area) // _BATCH * _BATCH
+    return areas[i:i + _BATCH]
+
+
 def _pace() -> None:
     with _pace_lock:
         wait = _pace_last[0] + _PACE_SEC - _time.monotonic()
@@ -98,9 +130,8 @@ class OecdAdapter(SourceAdapter):
         with _lock:
             if ck in _dims_cache:
                 return _dims_cache[ck]
-        _pace()
-        r = http.get(f"{BASE}/dataflow/{agency}/{flow}/latest", params={"references": "datastructure"},
-                     headers={"Accept": "application/vnd.sdmx.structure+xml;version=2.1"})
+        r = _get(f"{BASE}/dataflow/{agency}/{flow}/latest", params={"references": "datastructure"},
+                 headers={"Accept": "application/vnd.sdmx.structure+xml;version=2.1"})
         dims = parse_dimensions(r.text)
         with _lock:
             _dims_cache[ck] = dims
@@ -109,11 +140,37 @@ class OecdAdapter(SourceAdapter):
     def fetch(self, params: dict, since: date | None) -> list[Obs]:
         agency, flow = params["agency"], params["flow"]
         dims = self.dimensions(agency, flow)
-        key = ".".join(params["dims"].get(d, "") for d in dims)
-        start = since or (date.today() - timedelta(days=365 * 7))
-        _pace()
-        r = http.get(f"{BASE}/data/{agency},{flow}/{key}",
-                     params={"startPeriod": start.strftime("%Y-%m"), "format": "csvfile"})
-        if not r.text.strip() or r.text.strip() == "NoResultsFound":
+        area = params["dims"].get("REF_AREA", "")
+        batch = _batch_for(agency, flow, params["dims"].get("FREQ", ""), area) if area else []
+        key = ".".join("+".join(batch) if d == "REF_AREA" and batch else params["dims"].get(d, "")
+                       for d in dims)
+        # Начало периода общее для всей пачки, чтобы ответ переиспользовался:
+        # 7 лет для первой загрузки, 3 года для догрузки (перекрытие ingest меньше).
+        start = date.today() - timedelta(days=365 * (7 if since is None else 3))
+        url = f"{BASE}/data/{agency},{flow}/{key}"
+        q = {"startPeriod": start.strftime("%Y-%m"), "format": "csvfile"}
+        ck = f"{url} {q['startPeriod']}"
+        with _lock:
+            hit = _data_cache.get(ck)
+        if hit and _time.monotonic() - hit[0] < _TTL:
+            text = hit[1]
+        else:
+            text = _get(url, params=q).text
+            with _lock:
+                _data_cache[ck] = (_time.monotonic(), text)
+        if not text.strip() or text.strip() == "NoResultsFound":
             return []
-        return select_series(r.text, params.get("prefer") or [{}])
+        return select_series(text, params.get("prefer") or [{}], area or None)
+
+
+def _get(url: str, **kw):
+    left = _blocked_until[0] - _time.monotonic()
+    if left > 0:
+        raise SourceError(f"OECD: лимит запросов исчерпан, пауза ещё {int(left // 60)} мин")
+    _pace()
+    try:
+        return http.get(url, cache=False, retries=1, **kw)
+    except SourceError as e:
+        if "HTTP 429" in str(e):
+            _blocked_until[0] = _time.monotonic() + _BLOCK_SEC
+        raise

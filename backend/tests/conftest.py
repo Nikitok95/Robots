@@ -18,6 +18,9 @@ def env(tmp_path, monkeypatch):
     get_settings.cache_clear()
     db.reset_connection()
     http.clear_cache()
+    from app.adapters import oecd
+    oecd.clear_cache()
+    monkeypatch.setattr(oecd, "_PACE_SEC", 0)
     db.init_db()
     yield
     db.reset_connection()

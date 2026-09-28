@@ -278,12 +278,46 @@ def test_oecd_structure_and_selection():
 def test_oecd_adapter_builds_key_from_structure():
     respx.get(url__regex=r".*/dataflow/OECD\.SDD\.STES/DSD_KEI@DF_KEI/latest.*").mock(
         return_value=httpx.Response(200, text=DSD_XML))
-    data = respx.get(url__regex=r".*/data/OECD\.SDD\.STES,DSD_KEI@DF_KEI/USA\.M\.\..*").mock(
+    data = respx.get(url__regex=r".*/data/OECD\.SDD\.STES,DSD_KEI@DF_KEI/[A-Z+]*USA[A-Z+]*\.M\.\..*").mock(
         return_value=httpx.Response(200, text=OECD_CSV))
     obs = ADAPTERS["oecd"].fetch({"agency": "OECD.SDD.STES", "flow": "DSD_KEI@DF_KEI",
                                   "dims": {"REF_AREA": "USA", "FREQ": "M"},
                                   "prefer": [{"MEASURE": "IRLT"}]}, None)
     assert obs[-1].value == 4.25 and data.called
+
+
+OECD_BATCH_CSV = """DATAFLOW,REF_AREA,FREQ,MEASURE,TRANSFORMATION,TIME_PERIOD,OBS_VALUE
+OECD.SDD.STES:DSD_KEI@DF_KEI(4.0),USA,M,IRLT,_Z,2026-07,4.25
+OECD.SDD.STES:DSD_KEI@DF_KEI(4.0),{other},M,IRLT,_Z,2026-07,4.60
+"""
+
+
+@respx.mock
+def test_oecd_batches_countries_into_one_request():
+    from app.adapters.oecd import _batch_for
+    batch = _batch_for("OECD.SDD.STES", "DSD_KEI@DF_KEI", "M", "USA")
+    other = next(a for a in batch if a != "USA")
+    respx.get(url__regex=r".*/dataflow/.*").mock(return_value=httpx.Response(200, text=DSD_XML))
+    data = respx.get(url__regex=r".*/data/OECD\.SDD\.STES,DSD_KEI@DF_KEI/.*").mock(
+        return_value=httpx.Response(200, text=OECD_BATCH_CSV.format(other=other)))
+    p = {"agency": "OECD.SDD.STES", "flow": "DSD_KEI@DF_KEI", "prefer": [{"MEASURE": "IRLT"}]}
+    us = ADAPTERS["oecd"].fetch({**p, "dims": {"REF_AREA": "USA", "FREQ": "M"}}, None)
+    gb = ADAPTERS["oecd"].fetch({**p, "dims": {"REF_AREA": other, "FREQ": "M"}}, None)
+    assert us[-1].value == 4.25 and gb[-1].value == 4.60  # rows of other countries are filtered out
+    assert len(batch) > 1 and data.call_count == 1  # both sit in one batch, second call served from cache
+    assert "+" in str(data.calls[0].request.url)
+
+
+@respx.mock
+def test_oecd_429_is_not_retried_and_pauses_source():
+    respx.get(url__regex=r".*/dataflow/.*").mock(return_value=httpx.Response(200, text=DSD_XML))
+    data = respx.get(url__regex=r".*/data/.*").mock(return_value=httpx.Response(429, text="limit"))
+    p = {"agency": "OECD.SDD.STES", "flow": "DSD_KEI@DF_KEI", "prefer": [{}]}
+    with pytest.raises(SourceError):
+        ADAPTERS["oecd"].fetch({**p, "dims": {"REF_AREA": "USA", "FREQ": "M"}}, None)
+    with pytest.raises(SourceError) as e:
+        ADAPTERS["oecd"].fetch({**p, "dims": {"REF_AREA": "JPN", "FREQ": "M"}}, None)
+    assert data.call_count == 1 and "пауза" in str(e.value)
 
 
 def test_forexfactory_parse():
