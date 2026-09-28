@@ -113,5 +113,8 @@ SERIES: list[SeriesDef] = [
 
 BY_ID: dict[str, SeriesDef] = {s.id: s for s in SERIES}
 
+# Bollinger bands on US Treasury yield charts: (window in observations, k — width in σ).
+BOLLINGER: dict[str, tuple[int, float]] = {"us2y": (20, 0.7), "us10y": (20, 0.7), "us10y_real": (20, 0.7)}
+
 # Spread chart: both spreads + USD/JPY on the second axis
 SPREAD_CHART = {"left": ["spread_2y", "spread_10y"], "right": "usdjpy"}

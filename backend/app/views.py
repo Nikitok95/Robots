@@ -6,9 +6,9 @@ from datetime import date, datetime, timedelta, timezone
 
 from . import db
 from .adapters import ADAPTERS, CALENDARS
-from .catalog import BY_ID, GROUPS, SERIES, SPREAD_CHART
+from .catalog import BOLLINGER, BY_ID, GROUPS, SERIES, SPREAD_CHART
 from .map_catalog import IND_BY_ID, INDICATORS, all_entities, entity, load_cb_meetings, series_id
-from .services.series_math import change, value_at_or_before
+from .services.series_math import bollinger, change, value_at_or_before
 from .timeutil import today_local
 
 PERIODS = {"1M": 31, "3M": 92, "1Y": 366, "5Y": 366 * 5 + 2, "MAX": 366 * 60}
@@ -82,7 +82,16 @@ def series_chart(sid: str, period: str) -> dict:
             "decimals": sd.decimals if sd else 2, "note": sd.note if sd else ""}
     rows = db.get_series(sid, start)
     sources = sorted({r["source"] for r in rows})
-    return {**meta, "period": period, "points": [[r["date"], r["value"]] for r in rows], "sources": sources}
+    out = {**meta, "period": period, "points": [[r["date"], r["value"]] for r in rows], "sources": sources}
+    if sid in BOLLINGER and rows:
+        window, k = BOLLINGER[sid]
+        # Band needs `window` observations before the first visible date: take a margin of calendar days.
+        warm = (date.fromisoformat(rows[0]["date"]) - timedelta(days=window * 3)).isoformat()
+        pts = [(r["date"], r["value"]) for r in db.get_series(sid, warm)]
+        out["bands"] = {"window": window, "k": k,
+                        "points": [[d, round(m, 4), round(u, 4), round(lo, 4)]
+                                   for d, m, u, lo in bollinger(pts, window, k) if d >= rows[0]["date"]]}
+    return out
 
 
 def spread_chart(period: str) -> dict:

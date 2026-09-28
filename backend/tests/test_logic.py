@@ -55,3 +55,31 @@ def test_fedwatch_partial_probability():
 def test_fedwatch_missing_contract():
     res = fedwatch.compute([date(2026, 10, 28)], 4.08, 4.0, 4.25, {})
     assert "error" in res[0]
+
+
+def test_bollinger_bands():
+    from app.services.series_math import bollinger
+    pts = [(f"2026-09-{d:02d}", v) for d, v in zip(range(1, 6), [1.0, 2.0, 3.0, 4.0, 5.0])]
+    bands = bollinger(pts, window=3, k=0.7)
+    assert [b[0] for b in bands] == ["2026-09-03", "2026-09-04", "2026-09-05"]  # no band before the window fills
+    d, mid, up, lo = bands[0]
+    sd = (2 / 3) ** 0.5  # population σ of 1, 2, 3
+    assert mid == pytest.approx(2.0) and up == pytest.approx(2 + 0.7 * sd) and lo == pytest.approx(2 - 0.7 * sd)
+    assert bollinger(pts[:2], window=3, k=0.7) == []
+
+
+def test_series_chart_bands_only_for_treasuries():
+    from app import db
+    from app.catalog import BOLLINGER
+    from app.timeutil import today_local
+    from app.views import series_chart
+    today = today_local()
+    rows = [((today - timedelta(days=i)).isoformat(), 4.0 + (i % 5) * 0.01) for i in range(120, -1, -1)]
+    db.upsert_observations("us10y", rows, "FRED")
+    db.upsert_observations("vix", rows, "FRED")
+    ch = series_chart("us10y", "1M")
+    assert BOLLINGER["us10y"] == (20, 0.7) and ch["bands"]["k"] == 0.7 and ch["bands"]["window"] == 20
+    # warm-up history: the band starts at the first visible date, not 20 points later
+    assert ch["bands"]["points"][0][0] == ch["points"][0][0]
+    assert all(lo <= mid <= up for _, mid, up, lo in ch["bands"]["points"])
+    assert "bands" not in series_chart("vix", "1M")

@@ -66,3 +66,16 @@ def change(points: list[Point], mode: str, days: int, freq: str = "D") -> float 
     if mode == "pct":
         return round((v0 / v - 1) * 100, 3) if v else None
     return round(v0 - v, 6)
+
+
+def bollinger(points: list[Point], window: int = 20, k: float = 2.0) -> list[tuple[str, float, float, float]]:
+    """Bollinger bands over observations: (date, SMA, SMA + k·σ, SMA − k·σ).
+    σ — population standard deviation of the same `window` points (as in TradingView).
+    The first window−1 dates have no band."""
+    out = []
+    for i in range(window - 1, len(points)):
+        vals = [v for _, v in points[i - window + 1:i + 1]]
+        mid = sum(vals) / window
+        sd = math.sqrt(sum((v - mid) ** 2 for v in vals) / window)
+        out.append((points[i][0], mid, mid + k * sd, mid - k * sd))
+    return out

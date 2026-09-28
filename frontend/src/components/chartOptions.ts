@@ -22,12 +22,24 @@ export function tooltipBase() {
 export function lineOption(series: ChartSeries[], opts: { rightAxis?: ChartSeries; yName?: string } = {}) {
   const colors = [C.s1, C.s2, C.s3]
   const all = opts.rightAxis ? [...series, opts.rightAxis] : series
-  const decimalsOf = (name: string) => all.find((s) => s.name === name)?.decimals ?? 2
+  const decimalsOf = (name: string) => all.find((s) => s.name === name)?.decimals ?? all[0]?.decimals ?? 2
+  // Bollinger bands of a single series: thin dashed borders and a dotted SMA, same axis.
+  const bands = series.length === 1 && !opts.rightAxis ? series[0].bands : undefined
+  const bandSeries = bands ? [
+    { name: `BB верх (${bands.window}, ${bands.k}σ)`, idx: 2, style: 'dashed' },
+    { name: `SMA ${bands.window}`, idx: 1, style: 'dotted' },
+    { name: `BB низ (${bands.window}, ${bands.k}σ)`, idx: 3, style: 'dashed' },
+  ].map((b) => ({
+    name: b.name, type: 'line', showSymbol: false, silent: true, z: 1,
+    data: bands.points.map((p) => [p[0], p[b.idx]]),
+    lineStyle: { width: 1, type: b.style, color: C.s3, opacity: b.idx === 1 ? 0.7 : 0.9 },
+    itemStyle: { color: C.s3 },
+  })) : []
   return {
     animation: false,
     color: colors,
     grid: { left: 8, right: opts.rightAxis ? 8 : 16, top: 36, bottom: 56, containLabel: true },
-    legend: all.length > 1 ? { top: 0, textStyle: { color: C.text2 }, icon: 'roundRect', itemWidth: 12, itemHeight: 4 } : undefined,
+    legend: all.length + bandSeries.length > 1 ? { top: 0, textStyle: { color: C.text2 }, icon: 'roundRect', itemWidth: 12, itemHeight: 4 } : undefined,
     tooltip: {
       ...tooltipBase(),
       valueFormatter: undefined,
@@ -50,6 +62,6 @@ export function lineOption(series: ChartSeries[], opts: { rightAxis?: ChartSerie
       lineStyle: { width: 2 }, emphasis: { focus: 'series' },
       ...(s.unit === 'USD m' ? { type: 'bar', barMaxWidth: 6, itemStyle: { borderRadius: [2, 2, 0, 0],
         color: (p: any) => (p.value[1] >= 0 ? C.s1 : C.s2) } } : {}),
-    })),
+    })).concat(bandSeries as any[]),
   }
 }

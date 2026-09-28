@@ -87,6 +87,8 @@ export interface ChartSeries {
   period: string
   points: Point[]
   sources: string[]
+  /** Bollinger bands: [date, SMA, upper, lower]; only for configured series. */
+  bands?: { window: number; k: number; points: [string, number, number, number][] }
 }
 
 export interface IndState extends SeriesState {
